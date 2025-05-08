@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+egui = "0.31"
+log = "0.4.27"
+env_logger = "0.11.8"
+serde = { version = "1.0.219", features = ["derive"] }
+eframe = { version = "0.31.1", features = ["persistence"] }
