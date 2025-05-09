@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-use egui::Vec2;
+use egui::{Align, Layout, Rect, RichText, Separator, UiBuilder, Vec2, pos2, vec2};
 
 fn main() -> eframe::Result {
     env_logger::init();
@@ -12,7 +12,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "eframe test",
+        "nebytes",
         native_options,
         Box::new(|cc| Ok(Box::new(AppState::new(cc)))),
     )
@@ -34,10 +34,44 @@ impl AppState {
         // cc.egui_ctx.set_visuals_of(
         //     egui::Theme::Dark,
         //     egui::Visuals {
-        //         panel_fill: egui::Color32::RED,
+        //         panel_fill: egui::Color32::from_rgb(16, 16, 16),
         //         ..Default::default()
         //     },
         // );
+
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+
+        let mut fonts = egui::FontDefinitions::default();
+        fonts.font_data.insert(
+            "noto_sans".to_owned(),
+            std::sync::Arc::new(
+                // .ttf and .otf supported
+                egui::FontData::from_static(include_bytes!(
+                    "../assets/fonts/NotoSans_Condensed-Medium.ttf"
+                )),
+            ),
+        );
+        fonts.font_data.insert(
+            "jetbrains_mono".to_owned(),
+            std::sync::Arc::new(
+                // .ttf and .otf supported
+                egui::FontData::from_static(include_bytes!(
+                    "../assets/fonts/JetBrainsMono-Regular.ttf"
+                )),
+            ),
+        );
+
+        fonts
+            .families
+            .get_mut(&egui::FontFamily::Proportional)
+            .unwrap()
+            .insert(0, "noto_sans".to_owned());
+        fonts
+            .families
+            .get_mut(&egui::FontFamily::Monospace)
+            .unwrap()
+            .insert(0, "jetbrains_mono".to_owned());
+        cc.egui_ctx.set_fonts(fonts);
 
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
@@ -54,66 +88,48 @@ impl eframe::App for AppState {
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal_centered(|ui| {
-                let size = ui.available_size();
-                ui.add_sized(Vec2::new(size.x / 2.0, size.y), egui::Label::new("Part A"));
-                ui.add_sized(Vec2::new(1.0, size.y - 64.0), egui::Separator::default());
-                ui.add_sized(Vec2::new(size.x / 2.0, size.y), egui::Label::new("Part B"));
-            });
+            ui.spacing_mut().item_spacing = Vec2::new(0.0, 0.0);
+            let start = ui.cursor().min;
+            let split_width = ui.available_width() / 2.0;
 
-            egui::SidePanel::left("file_handler")
-                .resizable(false)
-                .show_inside(ui, |ui| {
-                    ui.label(
-                        "The scroll area below has many labels with interactive tooltips. \
-                  The purpose is to test that the tooltips close when you scroll.",
-                    )
-                    .on_hover_text("Try hovering a label below, then scroll!");
-                    egui::ScrollArea::vertical()
-                        .auto_shrink(false)
-                        .show(ui, |ui| {
-                            for i in 0..1000 {
-                                ui.label(format!("This is line {i}")).on_hover_ui(|ui| {
-                                    ui.style_mut().interaction.selectable_labels = true;
-                                    ui.label(
-                            "This tooltip is interactive, because the text in it is selectable.",
-                        );
-                                });
-                            }
-                        });
-                });
+            let mut split1 = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(Rect::from_min_max(
+                        start,
+                        start + vec2(split_width, ui.available_height()),
+                    ))
+                    .layout(Layout::top_down(Align::Center).with_main_align(Align::Center)),
+            );
+            split1.label("Part A");
 
-            ui.heading("eframe template");
+            let mut spacer = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(Rect::from_min_max(
+                        start + vec2(split_width - 1.0, 0.0),
+                        start + vec2(split_width + 1.0, ui.available_height()),
+                    ))
+                    .layout(Layout::left_to_right(Align::Center)),
+            );
+            spacer.set_width(2.0);
+            spacer.set_height(ui.available_height());
+            spacer.add(Separator::default().shrink(32.0).spacing(2.0));
 
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-            });
-
-            ui.separator();
-
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
-                "Source code."
-            ));
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
-            });
+            let mut split2 = ui.new_child(
+                UiBuilder::new()
+                    .max_rect(Rect::from_min_max(
+                        start + vec2(split_width, 0.0),
+                        start + ui.available_size(),
+                    ))
+                    .layout(Layout::top_down(Align::Center).with_main_align(Align::Center)),
+            );
+            split2.set_height(ui.available_height());
+            split2.add(
+                egui::Image::new(egui::include_image!("../assets/logo.png"))
+                    .maintain_aspect_ratio(true)
+                    .fit_to_exact_size(Vec2::new(96.0, 96.0)),
+            );
+            split2.add_space(8.0);
+            split2.label(RichText::new("Welcome to NEbytes!").size(24.0));
         });
     }
-}
-
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
 }
